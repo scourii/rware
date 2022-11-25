@@ -1,18 +1,29 @@
 (ns rware.core
-  (:require [tinklj.config :refer [register]]
-            [tinklj.keys.keyset-handle :as keyset]
-            [rware.encrypt :refer [create-key]])
+  (:require [clojure.tools.cli :refer [parse-opts]]
+            [clojure.string :as str]
+            [rware.encrypt :refer [encrypt-test]])
   (:gen-class))
 
-  (register)
 
-;; 1. Generate the private key material.
-(def private-keyset-handle (keyset/generate-new :ecies-p256-hkdf-hmac-sha256-aes128-gcm))
+(defn- usage
+  [options]
+  (->> ["Usage: rware [options]"
+        ""
+        "Options:"
+        options]
+       (str/join \newline)
+       (println)))
 
+(def cli-options
+  [["-e" "--encrypt" "Encrypts file specified"]
+   ["-d" "--decrypt PATH KEY" "Decrypts a file with specified key"]])
 
-(defn -main
-  "I don't do a whole lot ... yet."
+(defn -main  
   [& args]
-  (register)
-  (println create-key)
-  (println "Hello, World!"))
+  (let [{:keys [options summary]} (parse-opts args cli-options)]
+    (condp apply [options]
+      :help (usage summary)
+      :encrypt (encrypt-test)
+      :decrypt (println "hello")
+      
+      (println options))))
