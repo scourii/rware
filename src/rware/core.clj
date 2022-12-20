@@ -15,15 +15,17 @@
        (println)))
 
 (def cli-options
-  [["-e" "--encrypt" "Encrypts file specified"]
+  [["-e" "--encrypt PATH" "Encrypts file specified"]
    ["-d" "--decrypt PATH KEY" "Decrypts a file with specified key"]])
 
 (defn -main  
   [& args]
-  (let [{:keys [options summary]} (parse-opts args cli-options)]
+  (let [{:keys [options summary]} (parse-opts args cli-options)
+        path (:encrypt options)]
     (condp apply [options]
       :help (usage summary)
-      :encrypt (encrypt-test)
+      :encrypt (encrypt-test path)
       :decrypt (println "hello")
-      
       (println options))))
+
+
