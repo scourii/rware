@@ -1,7 +1,7 @@
 (ns rware.core
   (:require [clojure.tools.cli :refer [parse-opts]]
             [clojure.string :as str]
-            [rware.encrypt :refer [encrypt-test]])
+            [rware.encrypt :refer [encrypt-test decrypt-file]])
   (:gen-class))
 
 
@@ -16,16 +16,18 @@
 
 (def cli-options
   [["-e" "--encrypt PATH" "Encrypts file specified"]
-   ["-d" "--decrypt PATH KEY" "Decrypts a file with specified key"]])
+   ["-d" "--decrypt PATH" "Decrypts a file with specified key"]
+   ["-k" "--key PATH" "Specifies the key"]])
 
 (defn -main  
   [& args]
   (let [{:keys [options summary]} (parse-opts args cli-options)
-        path (:encrypt options)]
+        path (if (contains? options :encrypt) (:encrypt options)(:decrypt options))
+        key (:key options)]
     (condp apply [options]
       :help (usage summary)
       :encrypt (encrypt-test path)
-      :decrypt (println "hello")
+      :decrypt (decrypt-file path key)
       (println options))))
 
 
