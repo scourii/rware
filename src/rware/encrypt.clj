@@ -15,13 +15,19 @@
   (let [plain-text (slurp path)
         keyset-handle (keyset-handles/generate-new :aes128-gcm)
         primitive (primitives/aead keyset-handle)
-        aad (nonce/random-bytes 16)
+        aad (.getBytes "Salt")
         encrypted (sut/encrypt primitive
                                (.getBytes plain-text)
                                aad)]
     (keyset-storage/write-clear-text-keyset-handle keyset-handle "Key")
     (spit path (String. encrypted))))
 
-(defn decrypt
+(defn decrypt-file
   [path key]
-  )
+  (let [key-contents (slurp key)
+        keyset-handle (keyset-storage/load-clear-text-keyset-handle key-contents)
+        primitive (primitives/aead keyset-handle)
+        aad (.getBytes "Salt")]
+    (println (String. (sut/decrypt primitive
+                          path
+                          aad)))))
