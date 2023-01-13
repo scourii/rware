@@ -24,10 +24,11 @@
 
 (defn decrypt-file
   [path key]
-  (let [key-contents (slurp key)
-        keyset-handle (keyset-storage/load-clear-text-keyset-handle key-contents)
+  (let [file-contents (.getBytes (slurp path))
+        keyset-handle (keyset-storage/load-clear-text-keyset-handle key)
         primitive (primitives/aead keyset-handle)
-        aad (.getBytes "Salt")]
-    (println (String. (sut/decrypt primitive
-                          path
-                          aad)))))
+        aad (.getBytes "Salt")
+        decrypted (sut/decrypt primitive
+                               file-contents
+                               aad)]
+  (println file-contents)))
