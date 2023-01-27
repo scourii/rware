@@ -17,7 +17,7 @@
 (def cli-options
   [["-e" "--encrypt PATH" "Encrypts file specified"]
    ["-d" "--decrypt PATH" "Decrypts a file with specified key"]
-   ["-k" "--key PATH" "Specifies the key"]])
+   ["-k" "--key STRING" "Specifies the key"]])
 
 (defn -main  
   [& args]
@@ -26,7 +26,7 @@
         key (:key options)]
     (condp apply [options]
       :help (usage summary)
-      :encrypt (encrypt-test path)
+      :encrypt (encrypt-test path key)
       :decrypt (decrypt-file path key)
       (println options))))
 
