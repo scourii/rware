@@ -1,34 +1,36 @@
 (ns rware.encrypt
-  (:require [tinklj.primitives :as primitives]
-            [tinklj.config :refer [register]]
-            [tinklj.keys.keyset-handle :as keyset-handles]
-            [tinklj.keysets.keyset-storage :as keyset-storage]
-            [tinklj.encryption.aead :as sut]
-            [buddy.core.nonce :as nonce]
-            [clojure.java.io :refer [file]]
-            [clojure.test :refer [is]]))
+  (:require [rware.bytes :refer [bytes->b64]]
+            [lock-key.core :as lo])
+  (:import [javax.crypto Cipher KeyGenerator SecretKey]
+           [javax.crypto.spec SecretKeySpec]
+           [java.security SecureRandom]))
 
-(register :aead)
+(defn generate-key
+  [crypto-key]
+  (let [instance (KeyGenerator/getInstance "AES")
+        sr (SecureRandom/getInstance "SHA1PRNG")]
+    (.setSeed sr (.getBytes crypto-key "UTF-8"))
+    (.init instance 128 sr)
+    (.. instance generateKey getEncoded)))
+
+(defn generate-cipher
+  [mode crypto-key]
+  (let [key-spec (SecretKeySpec. (generate-key crypto-key) "AES")
+        cipher (Cipher/getInstance "AES")]
+    (.init cipher mode key-spec)
+    cipher))
 
 (defn encrypt-test 
-  [path]
-  (let [plain-text (slurp path)
-        keyset-handle (keyset-handles/generate-new :aes128-gcm)
-        primitive (primitives/aead keyset-handle)
-        aad (.getBytes "Salt")
-        encrypted (sut/encrypt primitive
-                               (.getBytes plain-text)
-                               aad)]
-    (keyset-storage/write-clear-text-keyset-handle keyset-handle "Key")
-    (spit path (String. encrypted))))
+  [path crypto-key]
+  (let [plain-text (.getBytes (slurp path) "UTF-8")
+         cipher (generate-cipher Cipher/ENCRYPT_MODE crypto-key)]
+    (println (bytes->b64 (.doFinal cipher plain-text)))
+    (spit path (String. plain-text))))
 
 (defn decrypt-file
   [path key]
-  (let [file-contents (.getBytes (slurp path))
-        keyset-handle (keyset-storage/load-clear-text-keyset-handle key)
-        primitive (primitives/aead keyset-handle)
-        aad (.getBytes "Salt")
-        decrypted (sut/decrypt primitive
-                               file-contents
-                               aad)]
-  (println file-contents)))
+  (let [file-contents (slurp path)]
+        
+    (String. (.doFinal key (bytes->b64 file-contents)))))
+
+;; Seq should match now
