@@ -1,7 +1,7 @@
 (ns rware.core
   (:require [clojure.tools.cli :refer [parse-opts]]
             [clojure.string :as str]
-            [rware.encrypt :refer [encrypt-test decrypt-file]])
+            [rware.encrypt :refer [encrypt-file decrypt-file]])
   (:gen-class))
 
 
@@ -26,7 +26,7 @@
         key (:key options)]
     (condp apply [options]
       :help (usage summary)
-      :encrypt (encrypt-test path key)
+      :encrypt (encrypt-file path key)
       :decrypt (decrypt-file path key)
       (println options))))
 
