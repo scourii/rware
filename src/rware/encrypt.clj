@@ -1,5 +1,5 @@
 (ns rware.encrypt
-  (:require [rware.bytes :refer [bytes->b64]])
+  (:require [rware.bytes :refer [b64->bytes bytes->b64]])
   (:import [javax.crypto Cipher KeyGenerator]
            [javax.crypto.spec SecretKeySpec]
            [java.security SecureRandom]))
@@ -27,8 +27,10 @@
     (spit path (String. encrypted-text))))
 
 (defn decrypt-file
-  [path key]
-  (let [file-contents (slurp path)]
-    (String. (.doFinal key (bytes->b64 file-contents)))))
+  [path crypto-key]
+  (let [file-contents (slurp path)
+        cipher (generate-cipher Cipher/DECRYPT_MODE crypto-key)]
+    (String. (.doFinal cipher (b64->bytes file-contents)))))
 
-;; Seq should match now
+
+
