@@ -22,12 +22,13 @@
 (defn -main  
   [& args]
   (let [{:keys [options summary]} (parse-opts args cli-options)
-        path (if (contains? options :encrypt) (:encrypt options)(:decrypt options))
-        key (:key options)]
-    (condp apply [options]
+        path (get options (if (contains? options :encrypt) :encrypt :decrypt))
+        key (:key options)
+        action (first (keys options))]
+    (case action
       :help (usage summary)
       :encrypt (encrypt-file path key)
       :decrypt (decrypt-file path key)
-      (println options))))
+      (usage summary))))
 
 
