@@ -7,9 +7,9 @@
 (defn encryption-key
   [crypto-key]
   (let [instance (KeyGenerator/getInstance "AES")
-        sr (SecureRandom/getInstance "SHA1PRNG")]
-    (.setSeed sr (.getBytes crypto-key "UTF-8"))
-    (.init instance 128 sr)
+        sr (SecureRandom/getInstance "SHA1PRNG")
+        seed (.getBytes crypto-key "UTF-8")]
+    (.init instance 128 (.setSeed sr seed))
     (.. instance generateKey getEncoded)))
 
 (defn generate-cipher
@@ -29,8 +29,7 @@
 (defn decrypt-file
   [path crypto-key]
   (let [file-contents (slurp path)
-        cipher (generate-cipher Cipher/DECRYPT_MODE crypto-key)]
-    (String. (.doFinal cipher (b64->bytes file-contents)))))
-
-
+        cipher (generate-cipher Cipher/DECRYPT_MODE crypto-key)
+        decrypted-text (.doFinal cipher (b64->bytes file-contents))]
+    (spit path (String. decrypted-text))))
 
