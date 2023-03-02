@@ -1,15 +1,17 @@
 (ns rware.encrypt
-  (:require [rware.bytes :refer [b64->bytes bytes->b64]])
+  (:require [rware.bytes :refer [b64->bytes bytes->b64]]
+            [clojure.java.io :as io])
   (:import [javax.crypto Cipher KeyGenerator]
-           [javax.crypto.spec SecretKeySpec]
-           [java.security SecureRandom]))
+           [javax.crypto.spec GCMParameterSpec SecretKeySpec]
+           [java.security SecureRandom]
+           [org.apache.commons.codec.binary Base64]))
 
 (defn encryption-key
   [crypto-key]
   (let [instance (KeyGenerator/getInstance "AES")
-        sr (SecureRandom/getInstance "SHA1PRNG")
-        seed (.getBytes crypto-key "UTF-8")]
-    (.init instance 128 (.setSeed sr seed))
+        sr (SecureRandom/getInstance "SHA1PRNG")]
+    (.setSeed sr (.getBytes crypto-key "UTF-8"))
+    (.init instance 128 sr)
     (.. instance generateKey getEncoded)))
 
 (defn generate-cipher
@@ -25,6 +27,12 @@
         cipher (generate-cipher Cipher/ENCRYPT_MODE crypto-key)
         encrypted-text (bytes->b64 (.doFinal cipher plain-text))]
     (spit path (String. encrypted-text))))
+
+(defn encrypt-dir
+  [dir-path crypto-key]
+  (doseq [file-contents (file-seq (io/file dir-path))
+          :when (.exists (io/file file-contents))]
+    (encrypt-file (.getPath file-contents) crypto-key)))
 
 (defn decrypt-file
   [path crypto-key]
