@@ -3,15 +3,14 @@
             [clojure.java.io :as io])
   (:import [javax.crypto Cipher KeyGenerator]
            [javax.crypto.spec GCMParameterSpec SecretKeySpec]
-           [java.security SecureRandom]
-           [org.apache.commons.codec.binary Base64]))
+           [java.security SecureRandom]))
 
 (defn encryption-key
   [crypto-key]
   (let [instance (KeyGenerator/getInstance "AES")
         sr (SecureRandom/getInstance "SHA1PRNG")]
     (.setSeed sr (.getBytes crypto-key "UTF-8"))
-    (.init instance 128 sr)
+    (.init instance 256 sr)
     (.. instance generateKey getEncoded)))
 
 (defn generate-cipher
@@ -21,7 +20,7 @@
     (.init cipher mode key-spec)
     cipher))
 
-(defn encrypt-file 
+(defn encrypt-file
   [path crypto-key]
   (let [plain-text (.getBytes (slurp path) "UTF-8")
         cipher (generate-cipher Cipher/ENCRYPT_MODE crypto-key)
@@ -34,10 +33,18 @@
           :when (.exists (io/file file-contents))]
     (encrypt-file (.getPath file-contents) crypto-key)))
 
+(defn decrypt-dir
+  [dir-path crypto-key]
+  (doseq [file-contents (file-seq (io/file dir-path))
+          :when (.exists (io/file file-contents))]
+    (encrypt-file (.getPath file-contents) crypto-key)))
+
 (defn decrypt-file
   [path crypto-key]
   (let [file-contents (slurp path)
         cipher (generate-cipher Cipher/DECRYPT_MODE crypto-key)
-        decrypted-text (.doFinal cipher (b64->bytes file-contents))]
-    (spit path (String. decrypted-text))))
-
+        decrypted-text (try (.doFinal cipher (b64->bytes file-contents)) (catch Exception e nil))]
+    (if (nil? decrypted-text)
+      (println "Error decrypting file:" path)
+      (-> path
+          (spit (String. decrypted-text)
