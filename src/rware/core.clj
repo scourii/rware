@@ -1,9 +1,9 @@
 (ns rware.core
   (:require [clojure.tools.cli :refer [parse-opts]]
             [clojure.string :as str]
-            [rware.encrypt :refer [encrypt-file decrypt-file]])
+            [clojure.java.io :as io]
+            [rware.encrypt :refer [encrypt-file encrypt-dir decrypt-file decrypt-dir]])
   (:gen-class))
-
 
 (defn- usage
   [options]
@@ -15,20 +15,28 @@
        (println)))
 
 (def cli-options
-  [["-e" "--encrypt PATH" "Encrypts file specified"]
+  [["-h" "--help" "Prints help information"]
+   ["-e" "--encrypt PATH" "Encrypts file specified"]
    ["-d" "--decrypt PATH" "Decrypts a file with specified key"]
    ["-k" "--key STRING" "Specifies the key"]])
 
-(defn -main  
+(defn handle-command
+  [command path key]
+  (condp = command
+    :encrypt (if (.isDirectory (io/file path))
+               (encrypt-dir path key)
+               (encrypt-file path key))
+    :decrypt (if (.isDirectory (io/file path))
+               (decrypt-dir path key)
+               (decrypt-file path key))))
+(defn -main
   [& args]
   (let [{:keys [options summary]} (parse-opts args cli-options)
-        path (get options (if (contains? options :encrypt) :encrypt :decrypt))
+        path (or (:encrypt options) (:decrypt options))
         key (:key options)
-        action (first (keys options))]
-    (case action
+        command (if (:encrypt options) :encrypt
+                    (if (:decrypt options) :decrypt :unknown))]
+    (condp apply [options]
       :help (usage summary)
-      :encrypt (encrypt-file path key)
-      :decrypt (decrypt-file path key)
-      (usage summary))))
-
-
+      :unknown (usage summary)
+      (handle-command command path key))))
