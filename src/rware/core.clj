@@ -20,23 +20,31 @@
    ["-d" "--decrypt PATH" "Decrypts a file with specified key"]
    ["-k" "--key STRING" "Specifies the key"]])
 
-(defn handle-command
+(defmulti handle-command
+  (fn [command path key] (if (.isDirectory (io/file path)) :dir :file)))
+
+(defmethod handle-command :file
   [command path key]
-  (condp = command
-    :encrypt (if (.isDirectory (io/file path))
-               (encrypt-dir path key)
-               (encrypt-file path key))
-    :decrypt (if (.isDirectory (io/file path))
-               (decrypt-dir path key)
-               (decrypt-file path key))))
+  (case command
+    :encrypt (encrypt-file path key)
+    :decrypt (decrypt-file path key)))
+
+(defmethod handle-command :dir
+  [command path key]
+  (case command
+    :encrypt (encrypt-dir path key)
+    :decrypt (decrypt-file path key)))
+
 (defn -main
   [& args]
   (let [{:keys [options summary]} (parse-opts args cli-options)
         path (or (:encrypt options) (:decrypt options))
         key (:key options)
-        command (if (:encrypt options) :encrypt
-                    (if (:decrypt options) :decrypt :unknown))]
+        command (cond
+                  (:encrypt options) :encrypt
+                  (:decrypt options) :decrypt
+                  :else :unknown)]
     (condp apply [options]
       :help (usage summary)
-      :unknown (usage summary)
+      :nil (usage summary)
       (handle-command command path key))))
